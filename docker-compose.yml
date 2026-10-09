@@ -1,0 +1,15 @@
+services:
+  backend:
+    image: ivan22590/flask-backend:latest
+    container_name: flask-backend
+    restart: unless-stopped
+    # порт наружу не публикуем — доступ только через frontend по внутренней сети
+
+  frontend:
+    build: ./frontend
+    container_name: flask-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend

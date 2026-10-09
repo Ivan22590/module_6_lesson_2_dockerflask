@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flask Docker Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 40px 16px;
+    }
+    h1 { font-size: 1.8rem; }
+    section {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px 24px;
+      width: 100%;
+      max-width: 520px;
+    }
+    h2 { font-size: 1.1rem; margin-bottom: 12px; color: #93c5fd; }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .ok { background: #14532d; color: #86efac; }
+    .down { background: #7f1d1d; color: #fecaca; }
+    .muted { color: #94a3b8; font-size: 0.9rem; margin-top: 8px; }
+    code { background: #0f172a; padding: 2px 6px; border-radius: 4px; color: #fbbf24; }
+    .calc { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    input {
+      width: 110px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 1rem;
+    }
+    button {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:hover { background: #3b82f6; }
+    #result { margin-top: 14px; font-size: 1.2rem; min-height: 1.4em; }
+    #result .error { color: #fca5a5; font-size: 1rem; }
+    .flow {
+      font-size: 0.95rem;
+      line-height: 1.7;
+      text-align: center;
+      color: #94a3b8;
+    }
+    .flow span { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <h1>🐳 Flask + Docker Test</h1>
+
+  <section>
+    <h2>Статус бэкенда</h2>
+    <span id="badge" class="badge down">проверка…</span>
+    <p class="muted">Hostname: <code id="hostname">—</code></p>
+    <p class="muted">Обновляется автоматически каждые 5 секунд</p>
+  </section>
+
+  <section>
+    <h2>Умножение двух чисел</h2>
+    <div class="calc">
+      <input id="a" type="number" value="6" step="any">
+      <span>×</span>
+      <input id="b" type="number" value="7" step="any">
+      <button id="btn">Умножить</button>
+    </div>
+    <div id="result"></div>
+    <p class="muted">Запрос: <code>GET /api/multiply?a=…&amp;b=…</code></p>
+  </section>
+
+  <section class="flow">
+    <span>Браузер</span> → <span>frontend:80</span> (nginx) →
+    <span>backend:5000</span> (Flask)<br>
+    запросы идут внутри сети Docker Compose
+  </section>
+
+  <script>
+    const badge = document.getElementById("badge");
+    const hostname = document.getElementById("hostname");
+
+    async function checkHealth() {
+      try {
+        const r = await fetch("/api/health");
+        const d = await r.json();
+        badge.textContent = "OK";
+        badge.className = "badge ok";
+        hostname.textContent = d.hostname || "—";
+      } catch (e) {
+        badge.textContent = "недоступен";
+        badge.className = "badge down";
+        hostname.textContent = "—";
+      }
+    }
+
+    async function multiply() {
+      const a = document.getElementById("a").value;
+      const b = document.getElementById("b").value;
+      const result = document.getElementById("result");
+      result.textContent = "…";
+      try {
+        const r = await fetch(`/api/multiply?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`);
+        const d = await r.json();
+        if (r.ok) {
+          result.innerHTML = `<strong>${d.a} × ${d.b} = ${d.result}</strong>`;
+        } else {
+          result.innerHTML = `<span class="error">${d.error || "Ошибка"}</span>`;
+        }
+      } catch (e) {
+        result.innerHTML = `<span class="error">Не удалось связаться с бэкендом</span>`;
+      }
+    }
+
+    document.getElementById("btn").addEventListener("click", multiply);
+    document.addEventListener("keydown", (e) => { if (e.key === "Enter") multiply(); });
+
+    checkHealth();
+    setInterval(checkHealth, 5000);
+  </script>
+</body>
+</html>
